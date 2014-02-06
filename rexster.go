@@ -23,14 +23,36 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"github.com/mbiermann/go-cluster"
 )
 
 // Rexster API
 
 type Rexster struct {
-	Host     string // Rexster server host
-	RestPort uint16 // Rexster server REST API port (usually 8182)
+	Cluster  cluster.Cluster // Rexster cluster
 	Debug    bool   // Enable debug logging
+}
+
+type RexsterOptions struct {
+	Hosts []string
+	Debug bool
+	NodeReanimationAfterSeconds	int64
+}
+
+func NewRexster(options *RexsterOptions) (r *Rexster, err error) {
+	clusterConf := &cluster.ClusterConfig{
+		Hosts: options.Hosts,
+		NodeReanimationAfterSeconds: options.NodeReanimationAfterSeconds,
+	}
+	cluster, err = cluster.NewCluster(clusterConf)
+	if err != nil {
+		err = errors.New("Unexpected error when setting up cluster client: %v", err)
+		return
+	}
+	r := &Rexster{}
+	r.Cluster = cluster
+	r.Debug = options.Debug
+	return r
 }
 
 type Graph struct {
@@ -201,7 +223,7 @@ func (r Rexster) send(method string, url string, data map[string]interface{}) (r
 		req.Header.Add("Content-Type", "application/json")
 	}
 
-	hr, err := http.DefaultClient.Do(req)
+	hr, err := r.Cluster.Do(req)
 	if err != nil {
 		if r.Debug {
 			log.Printf("HTTP %s failed to %s: %v", method, url, err)
@@ -234,10 +256,7 @@ func readResponseOrError(hr *http.Response) (resp *Response, errResp *errorRespo
 // URLs
 
 func (r Rexster) baseURL() *url.URL {
-	return &url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s:%d", r.Host, r.RestPort),
-	}
+	return &url.URL{}
 }
 
 func (g Graph) baseURL() *url.URL {
