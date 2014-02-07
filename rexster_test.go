@@ -7,29 +7,24 @@ import (
 	"time"
 )
 
+var rexsterOptions = &RexsterOptions{
+	Hosts: []string{"127.0.0.1:8182"},
+	Debug: true,
+	NodeReanimationAfterSeconds: 300,
+}
+var rexster, err = NewRexster(rexsterOptions)
+
 // Run this test against a Rexster server containing its built-in
 // sample graphs. In the rexster repo, run `./rexster.sh -s` to start
 // the server with the sample graphs.
 var testG = Graph{
 	Name: "tinkergraph",
-	Server: Rexster{
-		Host:     "127.0.0.1",
-		RestPort: 8182,
-		Debug:    true,
-	},
+	Server: *rexster,
 }
 
-func TestGetVertex(t *testing.T) {
-	r, err := testG.GetVertex("3")
-	if err != nil {
-		t.Fatal("failed to get vertex:", err)
-	}
-	if v := r.Vertex(); v.Id() != "3" {
-		t.Errorf("expected _id=3, got %v", v.Id())
-	}
-
+func TestGetNonExistingVertex(t *testing.T) {
 	// try to get a non-existent vertex
-	r, err = testG.GetVertex("doesnotexist")
+	r, err := testG.GetVertex("doesnotexist")
 	if err == nil {
 		t.Fatal("expected GetVertex to fail, got resp:", r)
 	}
@@ -44,7 +39,7 @@ func TestGetVertex(t *testing.T) {
 
 func TestGetVertexURL(t *testing.T) {
 	u := testG.getVertexURL("has/a/slash")
-	wantUrl := "http://127.0.0.1:8182/graphs/tinkergraph/vertices/has%252Fa%252Fslash"
+	wantUrl := "/graphs/tinkergraph/vertices/has%252Fa%252Fslash"
 	if u != wantUrl {
 		t.Errorf("want %s, got %s", wantUrl, u)
 	}

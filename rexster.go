@@ -29,7 +29,7 @@ import (
 // Rexster API
 
 type Rexster struct {
-	Cluster  cluster.Cluster // Rexster cluster
+	Cluster  *cluster.Cluster // Rexster cluster
 	Debug    bool   // Enable debug logging
 }
 
@@ -44,15 +44,15 @@ func NewRexster(options *RexsterOptions) (r *Rexster, err error) {
 		Hosts: options.Hosts,
 		NodeReanimationAfterSeconds: options.NodeReanimationAfterSeconds,
 	}
-	cluster, err = cluster.NewCluster(clusterConf)
+	c, err := cluster.NewCluster(clusterConf)
 	if err != nil {
-		err = errors.New("Unexpected error when setting up cluster client: %v", err)
+		err = errors.New(fmt.Sprintf("Unexpected error when setting up cluster client: %v", err))
 		return
 	}
-	r := &Rexster{}
-	r.Cluster = cluster
+	r = &Rexster{}
+	r.Cluster = c
 	r.Debug = options.Debug
-	return r
+	return
 }
 
 type Graph struct {
